@@ -1,43 +1,60 @@
 import numpy as np
+
+from agents import Agent
+from map import Map
 from materials import materials
 
 class World:
-    def __init__(self, width, height, food_count):
-        self.width = width
-        self.height = height
-        self.food_count = food_count
-        self.map = np.full((height, width), materials.Empty)  # Initialize an empty map
-        self.spawn_food()
+    def __init__(self, map: Map, agents: list[Agent]):
+        self.map = map
+        self.agents = agents
+        self.random_place_agents()
 
-    def spawn_food(self):
-        # Randomly place food on the map
-        food_indices = np.random.choice(self.width * self.height, self.food_count, replace=False)
-        food_coords = np.unravel_index(food_indices, (self.height, self.width))
-        for x, y in zip(*food_coords):
-            self.map[y, x] = materials.Food
+        self.actions = {
+                "move_up": lambda agent: agent.move(agent.pos_x, agent.pos_y + 1 % map.height),
+                "move_down": lambda agent: agent.move(agent.pos_x, agent.pos_y - 1 % map.height),
+                "move_left": lambda agent: agent.move(agent.pos_x - 1 % map.width, agent.pos_y),
+                "move_right": lambda agent: agent.move(agent.pos_x + 1 % map.width, agent.pos_y),
+                "eat": self._agent_action_eat,
+        }
+        self.dead_agents = []
 
-    def display(self):
-        for row in self.map:
-            print(' '.join(cell.symbol for cell in row))
+    def random_place_agents(self):
+        for agent in self.agents:
+            # select a random position on the map
+            pos_x, pos_y = (
+                np.random.randint(0, self.map.width),
+                np.random.randint(0, self.map.height),
+            )
+            agent.move(pos_x, pos_y)
 
-    def get_material_at(self, x, y):
-        return self.map[y, x]
+    def update(self):
+        for agent in self.agents:
+            decision= agent.decide(self._agent_inputs(agent))
+            self.take_action(agent, decision)
+        self._update_map()
+        np.random.shuffle(self.agents) # shuffle agents to avoid bias
+        for agent in self.agents:
+            agent.lose_energy(1)
+            if agent.energy <= 0:
+                self.agents.remove(agent)
+                self.dead_agents.append(agent)
 
-    def set_material_at(self, x, y, material):
-        if material:
-            self.map[y, x] = material
-        else:
-            raise ValueError("Material cannot be None")
+    def _update_map(self):
+        pass        
 
-# Example usage
-if __name__ == "__main__":
-    width = 10
-    height = 10
-    food_count = 15
+    def _agent_action_eat(self, agent):
+        if self.map[agent.pos_x, agent.pos_y] == materials.Food:
+            agent.eat(10)
+            self.map[agent.pos_x, agent.pos_y] = materials.Empty
 
-    world = World(width, height, food_count)
-    world.display()
-    print("\n")
-    world.spawn_food()
-    world.display()
+
+    def _agent_inputs(self, agent):
+        input= np.zeros(len(agent.sensors))
+        if "is_food" in agent.sensors:
+            if self.map[agent.pos_x, agent.pos_y] == materials.Food:
+                input[0] = 1
+        return input
     
+    def take_action(self, agent, action):
+        self.actions[action](agent)
