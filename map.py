@@ -6,20 +6,25 @@ class Map:
         self.width = width
         self.height = height
         self.food_count = food_count
-        self.map = np.full((height, width), materials.Empty)  # Initialize an empty map
+        self.map = np.full((width, height), materials.Empty)  # Initialize an empty map
         self.spawn_food()
 
     def spawn_food(self):
         # Randomly place food on the map
         food_indices = np.random.choice(self.width * self.height, self.food_count, replace=False)
-        food_coords = np.unravel_index(food_indices, (self.height, self.width))
+        food_coords = np.unravel_index(food_indices, (self.width, self.height))
         for x, y in zip(*food_coords):
-            self.map[y, x] = materials.Food
+            self[x, y] = materials.Food
 
     def display(self):
         for row in self.map:
             print(' '.join(cell.symbol for cell in row))
 
+    def copy(self):
+        new_self = Map(self.width, self.height, self.food_count)
+        new_self.map = self.map.copy()
+        return new_self
+    
     def __getitem__(self, key):
         return self.map[key]
 
@@ -27,7 +32,6 @@ class Map:
         if value not in materials:
             raise ValueError(f"Invalid material. Got {value}, expected one of {materials}")
         self.map[key] = value
-
 # Example usage
 if __name__ == "__main__":
     width = 10

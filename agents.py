@@ -5,9 +5,10 @@ class Agent:
     def __init__(self, sensors, actions, initial_x=None, initial_y=None):
         self.sensors = sensors
         self.actions = actions
-        self.x = initial_x
-        self.y = initial_y
+        self.pos_x = initial_x
+        self.pos_y = initial_y
         self.health = 100
+        self.max_health = 100
 
     def brain(self, input):
         return np.random.rand(len(self.actions))
@@ -18,17 +19,18 @@ class Agent:
         return self.actions[decision]
 
     def move(self, destination):
-        self.x = destination[0]
-        self.y = destination[1]
+        self.pos_x = destination[0]
+        self.pos_y = destination[1]
 
     def eat(self, energy):
         self.health += energy
+        self.health = min(self.health, self.max_health)
 
     def lose_energy(self, energy):
         self.health -= energy
 
     def __repr__(self) -> str:
-        return f"Agent {id(self)} at ({self.x}, {self.y}) with {self.health} health"
+        return f"Agent {id(self)} at ({self.pos_x}, {self.pos_y}) with {self.health} health"
 
 
 # Example usage
